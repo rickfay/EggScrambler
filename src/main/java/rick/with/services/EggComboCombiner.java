@@ -2,7 +2,11 @@ package rick.with.services;
 
 import rick.with.domain.OverlappingPair;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Finds the shortest "superstring" using the Greedy Approximate Algorithm
@@ -18,11 +22,7 @@ public final class EggComboCombiner {
      * @param fragments
      * @return
      */
-    public static String findShortestSuperstring(LinkedList<String> fragments) {
-
-        System.out.println(fragments);
-
-        LinkedList<String> fragmentsToRemove = new LinkedList<>();
+    public static StringBuffer findShortestSuperstring(LinkedList<StringBuffer> fragments) {
 
         // This loop will whittle down our array of 338 combinations until there is just one remaining
         while (fragments.size() > 1) {
@@ -35,58 +35,36 @@ public final class EggComboCombiner {
             int rightIndex = 0;
             int greatestOverlap = -1;
 
-            String overlappedFragment = null;
+            StringBuffer overlappedFragment = null;
             OverlappingPair op = null;
 
             for (int i = 0; i < fragments.size(); i++) {
                 for (int j = i + 1; j < fragments.size(); j++) {
 
-                    String f1 = fragments.get(i);
-                    String f2 = fragments.get(j);
+                    StringBuffer f1 = fragments.get(i);
+                    StringBuffer f2 = fragments.get(j);
 
-                    if (f1.contains(f2)) {
-                        fragmentsToRemove.add(f2);
-                    } else if (f2.contains(f1)) {
-                        fragmentsToRemove.add(f1);
-                    } else {
-                        op = findOverlappingPair(f1, f2);
+                    op = findOverlappingPair(f1, f2);
 
-                        // check for maximum overlap
-                        if (op.getOverlappedStr() != null && greatestOverlap < op.getAmount()) {
-                            greatestOverlap = op.getAmount();
-                            overlappedFragment = op.getOverlappedStr();
-                            leftIndex = i;
-                            rightIndex = j;
-                        }
+                    // check for maximum overlap
+                    if (op.getOverlappedStr() != null && greatestOverlap < op.getAmount()) {
+                        greatestOverlap = op.getAmount();
+                        overlappedFragment = op.getOverlappedStr();
+                        leftIndex = i;
+                        rightIndex = j;
                     }
                 }
             }
 
-            // Remove any duplicate fragments
-            if (!fragmentsToRemove.isEmpty()) {
-                System.out.printf("\nRemoving [%d] fragments already contained in other fragments, lucky!\n\n",
-                        fragmentsToRemove.size());
-                fragments.removeAll(fragmentsToRemove);
-            }
-
             // if no overlap, append last element to first
             if (greatestOverlap == -1) {
-
-                System.err.printf("OOF, no match among remaining %d fragments...\n", fragments.size());
-
-                String concatenatedFrags = fragments.getFirst() + fragments.getLast();
-
-                fragments.removeFirst();
-                fragments.removeLast();
-
-                fragments.addLast(concatenatedFrags); // TODO is this the most efficient spot in the list to add it?
-
+                return new StringBuffer(String.join(",", fragments.stream().map(StringBuffer::toString).collect(Collectors.toList())));
             } else {
 
                 // Consolidate the matched up fragments
 
-                String leftFrag = fragments.get(leftIndex);
-                String rightFrag = fragments.get(rightIndex);
+                StringBuffer leftFrag = fragments.get(leftIndex);
+                StringBuffer rightFrag = fragments.get(rightIndex);
 
                 fragments.remove(leftFrag);
                 fragments.remove(rightFrag);
@@ -105,7 +83,7 @@ public final class EggComboCombiner {
      * @param str2 Second string
      * @return
      */
-    private static OverlappingPair findOverlappingPair(String str1, String str2) {
+    private static OverlappingPair findOverlappingPair(StringBuffer str1, StringBuffer str2) {
 
         OverlappingPair op = new OverlappingPair(str1, str2);
 
@@ -124,7 +102,8 @@ public final class EggComboCombiner {
                 {
                     //update max and str
                     op.setAmount(i);
-                    op.setOverlappedStr(str1 + str2.substring(i));
+                    StringBuffer blah = (new StringBuffer(str1).append(str2, i, str2.length()));
+                    op.setOverlappedStr(blah);
                 }
             }
         }
@@ -138,7 +117,8 @@ public final class EggComboCombiner {
                 {
                     //update max and str
                     op.setAmount(i);
-                    op.setOverlappedStr(str2 + str1.substring(i));
+                    StringBuffer blah = new StringBuffer(str2).append(str1, i, str1.length());
+                    op.setOverlappedStr(blah);
                 }
             }
         }

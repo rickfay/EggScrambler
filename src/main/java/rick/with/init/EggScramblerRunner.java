@@ -1,8 +1,10 @@
 package rick.with.init;
 import rick.with.services.EggComboCombiner;
-import rick.with.services.EggPathFactory;
+import rick.with.services.EggComboUtil;
+import rick.with.services.PropertyUtil;
 
-import java.util.LinkedList;
+import java.text.DateFormat;
+import java.util.*;
 
 /**
  * Egg Scrambler
@@ -23,14 +25,55 @@ public class EggScramblerRunner {
 
         System.out.println("Starting...");
 
-        // Generate the 338 Combinations
-        LinkedList<String> combos = EggPathFactory.getAllCombinations();
-        System.out.printf("Generated %d Combos: %s\n", combos.size(), combos);
+        PropertyUtil.loadProperties();
 
-        // Reduce the combinations into the optimal superstring
-        String superstring = EggComboCombiner.findShortestSuperstring(combos);
+        // Fetch and cache the combos to try and assemble
+        boolean useReducedCombos = PropertyUtil.getBooleanProperty(PropertyUtil.USE_REDUCED_COMBOS);
+        LinkedList<StringBuffer> comboCache = useReducedCombos ? EggComboUtil.get210Combos() : EggComboUtil.get338Combos();
 
-        System.out.printf("superstring:\n%s\nsize: %d\n", superstring, superstring.length());
+        int lowest = Integer.MAX_VALUE;
+        StringBuffer solution = null;
+
+        int execuions = 0;
+
+        // Loop until we hit our goal
+        while (lowest > PropertyUtil.getIntProperty(PropertyUtil.LENGTH_GOAL)) {
+
+            execuions++;
+
+            LinkedList<StringBuffer> combos = (LinkedList<StringBuffer>) comboCache.clone();
+
+            // Randomness improves the algorithm and makes each execution different
+            Collections.shuffle(combos, new Random(System.currentTimeMillis()));
+
+            // Reduce the combinations into the optimal superstring
+            StringBuffer superstring = EggComboCombiner.findShortestSuperstring(combos);
+
+            long commas = superstring.chars().filter(ch -> ch == ',').count();
+
+            if (superstring.length() - commas < lowest) {
+
+                // Validate for correctness
+                if (!EggComboUtil.validateSuperString(superstring.toString())) {
+                    System.err.println("Superstring failed validation: " + superstring);
+                }
+
+                solution = superstring;
+                lowest = (int) (superstring.length() - commas);
+
+                Locale locale = new Locale("en", "US");
+                DateFormat dateFormat = DateFormat.getTimeInstance(DateFormat.DEFAULT, locale);
+
+                System.out.println(String.format("\n[%tc][Execution: %07d][Length: %d][Chunks: %d][Superstring: %s]",
+                        new Date(), execuions, lowest, commas + 1, superstring));
+
+            } else if (execuions % 100 == 0) {
+                System.out.println(String.format("[%tc][Execution: %07d][Still scrambling that egg...]", new Date(), execuions));
+            }
+        }
+
+        System.out.printf("\n\nsuperstring:\n%s\nsize: %d\n\n", solution, solution.length());
+
 
         System.out.println("Terminating...");
     }
